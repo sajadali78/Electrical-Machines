@@ -5,6 +5,7 @@ import { PerformanceTab } from './components/performance/PerformanceTab';
 import { SheetTab } from './components/results/SheetTab';
 import { SlotsTab } from './components/slots/SlotsTab';
 import { CombinationTab } from './components/winding/CombinationTab';
+import { VernierTab } from './components/vernier/VernierTab';
 import { WindingTab } from './components/winding/WindingTab';
 import { ParameterSheet } from './components/layout/ParameterSheet';
 import { TopBar } from './components/layout/TopBar';
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'winding', label: 'Winding' },
   { id: 'combos', label: 'Slot / pole' },
   { id: 'perf', label: 'Performance' },
+  { id: 'vernier', label: 'Vernier machine' },
   { id: 'opt', label: 'Optimizer' },
   { id: 'sheet', label: 'Calculation sheet' },
 ] as const;
@@ -52,6 +54,7 @@ export function App() {
           {tab === 'winding' && <WindingTab />}
           {tab === 'combos' && <CombinationTab />}
           {tab === 'perf' && <PerformanceTab />}
+          {tab === 'vernier' && <VernierTab />}
           {tab === 'opt' && <OptimizerTab />}
           {tab === 'sheet' && <SheetTab />}
         </main>
