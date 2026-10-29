@@ -1,0 +1,11 @@
+export * from './types';
+export * from './math';
+export * from './materials';
+export * from './defaults';
+export * from './presets';
+export * from './winding';
+export * from './slots';
+export * from './sizing/result';
+export * from './sizing/main';
+export { runDesign, excitationEmf } from './sizing/design';
+export { optimizeDesign, type ParetoPoint } from './optimize/pareto';
