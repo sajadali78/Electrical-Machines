@@ -4,7 +4,8 @@ A browser-based design workstation for radial-flux electrical machines. You ente
 
 - **Main dimensions**: bore D, stack length L, air gap, outer diameter, plus checks on L/τ and peripheral speed.
 - **Slot and tooth geometry** for nine parametric slot shapes. Every slot is drawn with annotated dimensions and auto-sized for the required copper area at a chosen tooth flux density.
-- **Windings** with 1, 2, 4, 6 or 8 layers, built from the star of slots. You can also edit the winding matrix by hand with any layer count. The app reports winding functions, rotating MMF waves, winding factors for every harmonic, THD, differential leakage, periodicity and the maximum number of parallel paths.
+- **Windings** with **any number of layers from 1 to 8**. Each layer is the star-of-slots base layer shifted by d slots with polarity ± and relative turns, so 3-layer, 4-layer and odd-layer windings are generated automatically. A 3-layer winding is available for every feasible slot/pole combination, using a shared double-turn middle layer where equal turns cannot close. You can also edit the winding matrix by hand. The app reports winding functions, rotating MMF waves, winding factors for every harmonic, THD, differential leakage, periodicity and the maximum number of parallel paths.
+- **Winding configuration suggestions** in the style of online winding calculators, extended beyond two layers. For the chosen slots, poles and phases it checks feasibility and ranks every single- and double-layer coil span together with optimised 3…8-layer stacks by k_w1, MMF THD, σ_δ, sub-harmonics or end-winding span, and proposes alternative slot numbers.
 - **Rotor design** for **induction** machines (squirrel cage or wound rotor), **PMSM** (surface or interior V/bar magnets) and **wound-field synchronous** machines (salient or cylindrical rotor).
 - **Equivalent circuit, losses, efficiency and performance**: rated operating point, direct-on-line and inverter torque–speed curves, efficiency map, loss breakdown, and torque versus load angle.
 - **Design-rule checks**, a **loss/mass Pareto optimiser**, and a **multi-layer winding optimiser**.
@@ -55,7 +56,7 @@ The repository includes `.github/workflows/deploy.yml`. On every push to `main` 
 3. Explore the tabs:
    - **Cross-section**: radial and axial drawings. Scroll to zoom, drag to pan, and hover any slot, tooth, magnet, pole or air gap for its dimensions and flux densities.
    - **Slots**: annotated stator and rotor slot drawings, a slot data table, the tooth-width profile, and libraries of all slot shapes.
-   - **Winding**: summary, editable layout matrix, multi-layer sub-winding editor, developed winding diagram, star of slots, winding functions, MMF with a time slider, harmonic spectrum and table, and the multi-layer optimiser.
+   - **Winding**: configuration suggestions (apply with one click), summary, editable layout matrix, layer-stack editor, developed winding diagram, star of slots, winding functions, MMF with a time slider, harmonic spectrum and table, and the layer-stack optimiser.
    - **Slot / pole**: winding-factor chart over slot and pole counts (click a cell to use it).
    - **Performance**: torque–speed, power, efficiency map, loss donut, efficiency/PF, load angle, equivalent circuit.
    - **Optimizer**: L/τ × J sweep with the Pareto front of total loss versus active mass.
@@ -108,6 +109,6 @@ This is an **analytical pre-design** tool meant to produce a consistent starting
 
 ## Credits
 
-- Winding layouts follow the star-of-slots method (Bianchi & Dai Prè) used by online winding calculators such as Emetor. Multi-layer windings are built as shifted double-layer sub-windings.
+- Winding layouts follow the star-of-slots method (Bianchi & Dai Prè) used by online winding calculators such as Emetor. Windings with more layers are built as stacks of shifted base layers.
 - Sizing and parameter formulas follow Pyrhönen, Jokinen & Hrabovcová, *Design of Rotating Electrical Machines*, and Sawhney, *A Course in Electrical Machine Design*.
 - The PDF reports embed DejaVu Sans (Bitstream Vera license; see `public/fonts/DejaVu-LICENSE.txt`).

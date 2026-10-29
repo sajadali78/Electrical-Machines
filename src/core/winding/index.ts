@@ -4,3 +4,4 @@ export * from './layout';
 export * from './analysis';
 export * from './combinations';
 export * from './optimizeLayers';
+export * from './suggest';

@@ -1,6 +1,6 @@
 import { baseSpec, withSlotPole } from '../core/defaults';
 import type { MachineSpec } from '../core/types';
-import { defaultPairs } from '../core/winding/layout';
+import { defaultLayerDefs } from '../core/winding/layout';
 
 /** Immutable set by dotted path (`winding.slots`). */
 export function setIn<T>(obj: T, path: string, value: unknown): T {
@@ -42,14 +42,12 @@ export function applyChange(spec: MachineSpec, path: string, value: unknown): Ma
     const L = Math.max(1, Math.min(8, Math.round(Number(value))));
     next = setIn(next, 'winding.layers', L);
     next = setIn(next, 'winding.custom', null);
-    if (L >= 4 && next.winding.pairs.length < L / 2) next = setIn(next, 'winding.pairs', defaultPairs(L, next.winding.coilPitch));
+    next = setIn(next, 'winding.layerDefs', defaultLayerDefs(L, next.winding.coilPitch, next.winding.slots, next.winding.poles));
   }
   if (path === 'winding.coilPitch') {
     const y = Math.max(1, Math.round(Number(value)));
     next = setIn(next, 'winding.coilPitch', y);
-    if (spec.winding.pairs.every((p) => p.pitch === spec.winding.coilPitch)) {
-      next = setIn(next, 'winding.pairs', spec.winding.pairs.map((p) => ({ ...p, pitch: y })));
-    }
+    next = setIn(next, 'winding.layerDefs', defaultLayerDefs(Math.max(3, next.winding.layers), y, next.winding.slots, next.winding.poles));
     next = setIn(next, 'winding.custom', null);
   }
   if (path === 'winding.phases') next = setIn(next, 'winding.custom', null);

@@ -1,51 +1,68 @@
 import { useState } from 'react';
-import type { LayerPair } from '../../core/types';
-import { optimizeLayerPairs, type LayerCandidate, type LayerObjective } from '../../core/winding/optimizeLayers';
-import { starStep } from '../../core/winding/layout';
+import type { LayerDef } from '../../core/types';
+import { defaultLayerDefs } from '../../core/winding/layout';
+import { optimizeLayerStack, type LayerCandidate, type LayerObjective } from '../../core/winding/optimizeLayers';
 import { useDesign } from '../../state/store';
 import { fmt } from '../../ui/format';
 
-/** Editor for the double-layer sub-windings of a multi-layer winding, plus a search for good shifts. */
-export function LayerPairsEditor() {
+export const stackLabel = (defs: LayerDef[]) => defs.map((d) => `${d.shift}${d.sign > 0 ? '+' : '−'}${(d.turns ?? 1) > 1 ? `×${d.turns}` : ''}`).join(' · ');
+
+/** Editor for the layer stack of a winding with three or more layers. */
+export function LayerStackEditor() {
   const { spec, update } = useDesign();
   const w = spec.winding;
-  const n = Math.floor(w.layers / 2);
-  const pairs: LayerPair[] = Array.from({ length: n }, (_, j) => w.pairs[j] ?? { pitch: w.coilPitch, shift: j });
-  const step = (starStep(w.slots, w.poles) * 180) / Math.PI;
-  const setPair = (j: number, patch: Partial<LayerPair>) => update('winding.pairs', pairs.map((p, i) => (i === j ? { ...p, ...patch } : p)));
+  const L = w.layers;
+  const defs: LayerDef[] = w.layerDefs.length >= L ? w.layerDefs.slice(0, L) : defaultLayerDefs(L, w.coilPitch, w.slots, w.poles);
+  const alphaE = (360 * w.poles) / 2 / w.slots;
+  const setDef = (l: number, patch: Partial<LayerDef>) => update('winding.layerDefs', defs.map((d, i) => (i === l ? { ...d, ...patch } : d)));
   return (
     <div className="table-wrap">
       <table className="data" style={{ width: 'auto' }}>
         <thead>
           <tr>
-            <th>Sub-winding</th>
-            <th>Layers</th>
-            <th className="num">Coil pitch y</th>
-            <th className="num">Sector shift [steps]</th>
-            <th className="num">Electrical shift</th>
+            <th>Layer</th>
+            <th className="num">Slot shift d</th>
+            <th>Polarity</th>
+            <th className="num">Turns</th>
+            <th className="num">Electrical shift d·α_e</th>
           </tr>
         </thead>
         <tbody>
-          {pairs.map((p, j) => (
-            <tr key={j}>
-              <td>#{j + 1}</td>
+          {defs.map((d, l) => (
+            <tr key={l}>
+              <td>{l + 1}{l === 0 ? ' (reference)' : ''}</td>
+              <td className="num">
+                <input className="input num" style={{ width: 70 }} type="number" min={0} max={w.slots - 1} value={d.shift} disabled={l === 0} onChange={(e) => setDef(l, { shift: ((Math.round(+e.target.value || 0) % w.slots) + w.slots) % w.slots })} />
+              </td>
               <td>
-                {2 * j + 1} & {2 * j + 2}
+                <select className="select" value={d.sign} disabled={l === 0} onChange={(e) => setDef(l, { sign: +e.target.value > 0 ? 1 : -1 })}>
+                  <option value={1}>+ (go)</option>
+                  <option value={-1}>− (return)</option>
+                </select>
               </td>
               <td className="num">
-                <input className="input num" style={{ width: 70 }} type="number" min={1} max={w.slots - 1} value={p.pitch} onChange={(e) => setPair(j, { pitch: Math.max(1, Math.round(+e.target.value || 1)) })} />
+                <select className="select" value={d.turns ?? 1} onChange={(e) => setDef(l, { turns: +e.target.value })}>
+                  {[1, 2, 3, 4].map((t) => (
+                    <option key={t} value={t}>
+                      ×{t}
+                    </option>
+                  ))}
+                </select>
               </td>
-              <td className="num">
-                <input className="input num" style={{ width: 70 }} type="number" value={p.shift} onChange={(e) => setPair(j, { shift: Math.round(+e.target.value || 0) })} />
-              </td>
-              <td className="num">{fmt(p.shift * step, 2)}°</td>
+              <td className="num">{fmt(((d.shift * alphaE) % 360 + 360) % 360, 1)}°</td>
             </tr>
           ))}
         </tbody>
       </table>
+      <div className="field-row" style={{ justifyContent: 'flex-start', gap: 8 }}>
+        <button type="button" className="btn small" onClick={() => update('winding.layerDefs', defaultLayerDefs(L, w.coilPitch, w.slots, w.poles))}>
+          Reset to default stack
+        </button>
+      </div>
       <p className="hint">
-        Each sub-winding is a double-layer winding built from the star of slots; its phase belts are rotated by <i>shift × {fmt(step, 2)}°</i> (one star step). Shifting sub-windings
-        against each other cancels selected MMF harmonics (e.g. the sub-harmonic of 12-slot/10-pole windings) at the cost of a slightly lower k_w1.
+        Every layer is the star-of-slots base layer shifted by <i>d</i> slots with the chosen polarity. The standard double layer is <span className="mono">0+ · y−</span>; extra layers add shifted
+        copies that cancel selected MMF harmonics. A layer with ×2 turns holds the coil sides of two coil groups (it takes twice the slot area); the default 3-layer stack
+        <span className="mono"> b+ · (b+y)−×2 · (b+2y)+</span> uses this so that a 3-layer winding closes into coils for every slot/pole combination.
       </p>
     </div>
   );
@@ -53,6 +70,7 @@ export function LayerPairsEditor() {
 
 export function LayerOptimizer() {
   const { spec, update, notify } = useDesign();
+  const w = spec.winding;
   const [objective, setObjective] = useState<LayerObjective>('thd');
   const [minKw, setMinKw] = useState(0.85);
   const [res, setRes] = useState<LayerCandidate[] | null>(null);
@@ -60,7 +78,7 @@ export function LayerOptimizer() {
   const run = () => {
     setBusy(true);
     window.setTimeout(() => {
-      setRes(optimizeLayerPairs(spec.winding, objective, minKw));
+      setRes(optimizeLayerStack(w.slots, w.poles, w.phases, w.layers, w.coilPitch, objective, minKw));
       setBusy(false);
     }, 20);
   };
@@ -73,6 +91,7 @@ export function LayerOptimizer() {
             <option value="thd">Minimum MMF THD</option>
             <option value="sigma">Minimum differential leakage</option>
             <option value="subharmonics">Minimum sub-harmonics</option>
+            <option value="kw1">Maximum k_w1</option>
           </select>
         </label>
         <label className="check-inline">
@@ -80,22 +99,23 @@ export function LayerOptimizer() {
           <input className="input num" style={{ width: 70 }} type="number" step={0.01} min={0.3} max={1} value={minKw} onChange={(e) => setMinKw(+e.target.value || 0.85)} />
         </label>
         <button type="button" className="btn primary small" onClick={run} disabled={busy}>
-          {busy ? 'Searching…' : 'Search shifts & pitches'}
+          {busy ? 'Searching…' : `Search ${w.layers}-layer stacks`}
         </button>
       </div>
       {res && (
         <div className="table-wrap">
           {res.length === 0 ? (
-            <p className="hint">No balanced layout meets the winding-factor limit.</p>
+            <p className="hint">No balanced, closable stack meets the winding-factor limit.</p>
           ) : (
             <table className="data">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Sub-windings (pitch / shift)</th>
+                  <th>Layer stack (shift, polarity)</th>
                   <th className="num">k_w1</th>
                   <th className="num">MMF THD</th>
-                  <th className="num">Score</th>
+                  <th className="num">σ_δ</th>
+                  <th className="num">Sub-harmonics</th>
                   <th />
                 </tr>
               </thead>
@@ -103,17 +123,18 @@ export function LayerOptimizer() {
                 {res.map((c, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
-                    <td className="mono">{c.pairs.map((p) => `y=${p.pitch}/s=${p.shift}`).join('  ')}</td>
+                    <td className="mono">{stackLabel(c.defs)}</td>
                     <td className="num">{fmt(c.kw1, 4)}</td>
                     <td className="num">{fmt(c.thd * 100, 1)} %</td>
-                    <td className="num">{fmt(c.score, 4)}</td>
+                    <td className="num">{fmt(c.sigma * 100, 2)} %</td>
+                    <td className="num">{fmt(c.subharmonics * 100, 1)} %</td>
                     <td>
                       <button
                         type="button"
                         className="btn small"
                         onClick={() => {
-                          update('winding.pairs', c.pairs);
-                          notify('Applied multi-layer configuration');
+                          update('winding.layerDefs', c.defs);
+                          notify('Applied layer stack');
                         }}
                       >
                         Apply

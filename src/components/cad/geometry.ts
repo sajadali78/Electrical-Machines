@@ -4,7 +4,7 @@
  */
 import { ipmMagnetRects } from '../../core/sizing/rotor/pm';
 import type { DesignResult, SlotResult } from '../../core/sizing/result';
-import { shapeOf, splitEqualArea, centroid, type Pt } from '../../core/slots';
+import { shapeOf, splitByWeights, centroid, bounds, type Pt } from '../../core/slots';
 import type { LayerArrangement, WindingMatrix } from '../../core/types';
 
 export type XY = [number, number];
@@ -74,14 +74,16 @@ export interface ConductorCell {
   sign: 1 | -1 | 0;
   cx: number;
   cy: number;
+  label: number; // font size that fits the cell
 }
 
 /** Layered conductor polygons for a wound slot set, coloured by the winding matrix. */
 export function windingCells(slot: SlotResult, R: number, Q: number, side: 'stator' | 'rotor', matrix: WindingMatrix, arrangement: LayerArrangement, offset = 0): ConductorCell[] {
   const shape = shapeOf(slot.shape);
   const region = shape.conductors(slot.params)[0];
-  const L = matrix.length;
-  const layers = splitEqualArea(region, L, arrangement); // layer 0 nearest the air gap
+  // layer areas follow the layer turns; layer 0 nearest the air gap
+  const weights = matrix.map((row) => row.find((c) => c.sign !== 0)?.w ?? 1);
+  const layers = splitByWeights(region, weights, arrangement);
   const out: ConductorCell[] = [];
   for (let k = 0; k < Q; k++) {
     const th = slotTheta(k, Q, offset);
@@ -90,7 +92,10 @@ export function windingCells(slot: SlotResult, R: number, Q: number, side: 'stat
       const cell = matrix[l]?.[k] ?? { phase: 0, sign: 0 };
       const pts = poly.map((p) => toXY(R, th, p, side));
       const c = toXY(R, th, centroid(poly), side);
-      out.push({ slot: k, layer: l, d: pathFrom(pts), phase: cell.phase, sign: cell.sign, cx: c[0], cy: c[1] });
+      const b = bounds([poly]);
+      // "A+" is about 1.3 em wide and 0.8 em tall
+      const label = Math.max(0.3, Math.min((b.vMax - b.vMin) / 1.45, (b.uMax - b.uMin) / 1.0));
+      out.push({ slot: k, layer: l, d: pathFrom(pts), phase: cell.phase, sign: cell.sign, cx: c[0], cy: c[1], label });
     });
   }
   return out;

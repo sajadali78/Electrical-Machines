@@ -1,5 +1,5 @@
 import type { SlotResult } from '../../core/sizing/result';
-import { centroid, shapeOf, splitEqualArea, type SlotDimension, type Pt } from '../../core/slots';
+import { centroid, shapeOf, splitByWeights, type SlotDimension, type Pt } from '../../core/slots';
 import type { LayerArrangement, WindingCell } from '../../core/types';
 import { phaseName } from '../../core/winding/phases';
 import { fmt, phaseColor } from '../../ui/format';
@@ -66,7 +66,7 @@ export function SlotDetail({ slot, R, Q, side, cells, arrangement = 'radial', ba
 
   const regions = shape.conductors(p);
   const L = cells?.length ?? 0;
-  const layerPolys = L > 0 ? splitEqualArea(regions[0], L, arrangement) : [];
+  const layerPolys = L > 0 ? splitByWeights(regions[0], (cells ?? []).map((c) => c?.w ?? 1), arrangement) : [];
 
   const xs = lam.map((q) => q[0]);
   const halfW = Math.max(...xs.map(Math.abs));

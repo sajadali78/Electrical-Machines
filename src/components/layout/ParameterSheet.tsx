@@ -74,7 +74,7 @@ export function ParameterSheet() {
         <SelectField
           label="Layers"
           value={w.layers}
-          options={[1, 2, 4, 6, 8].map((n) => ({ value: n, label: n === 1 ? 'Single layer' : n === 2 ? 'Double layer' : `${n} layers` }))}
+          options={[1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ value: n, label: n === 1 ? 'Single layer' : n === 2 ? 'Double layer' : `${n} layers` }))}
           onChange={set('winding.layers')}
         />
         <NumberField label="Coil pitch" symbol="y (slots)" unit="" integer value={w.coilPitch} min={1} max={w.slots - 1} onChange={set('winding.coilPitch')} />

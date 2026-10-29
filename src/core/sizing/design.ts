@@ -31,8 +31,16 @@ function layoutPitch(spec: MachineSpec, layout: WindingLayout): number | null {
     return d;
   }
   if (layout.kind === 'multi') {
-    const ps = new Set(spec.winding.pairs.slice(0, layout.layers / 2).map((p) => p.pitch));
-    return ps.size === 1 ? [...ps][0] : null;
+    // a stack of (go, return) layer pairs that all share one span behaves like that pitch
+    const defs = spec.winding.layerDefs.slice(0, layout.layers);
+    if (defs.length % 2 !== 0) return null;
+    const Q = spec.winding.slots;
+    const spans = new Set<number>();
+    for (let l = 0; l < defs.length; l += 2) {
+      if (defs[l].sign !== -defs[l + 1].sign) return null;
+      spans.add((((defs[l + 1].shift - defs[l].shift) % Q) + Q) % Q);
+    }
+    return spans.size === 1 ? [...spans][0] : null;
   }
   return null;
 }

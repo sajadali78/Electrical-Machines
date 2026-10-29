@@ -37,3 +37,18 @@ describe('design presets produce plausible machines', () => {
     });
   }
 });
+
+describe('three-layer windings in the full design flow', () => {
+  for (const preset of PRESETS) {
+    it(`${preset.id} with the default 3-layer winding`, () => {
+      const s = preset.build();
+      const r = runDesign({ ...s, winding: { ...s.winding, layers: 3, layerDefs: [], custom: null } });
+      expect(r.layout.layers).toBe(3);
+      expect(r.layout.units).toBe(4);
+      expect(r.layout.notes).toEqual([]);
+      expect(r.winding.balanced).toBe(true);
+      expect(r.stator.Zs % 4).toBe(0);
+      expect(r.losses.efficiency).toBeGreaterThan(0.8);
+    });
+  }
+});

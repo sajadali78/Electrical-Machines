@@ -34,7 +34,7 @@ export function combinationTable(slotList: number[], poleList: number[], m: numb
         phases: m,
         layers,
         coilPitch: pitch,
-        pairs: [],
+        layerDefs: [],
         parallelPaths: 1,
         arrangement: 'radial',
         skewSlots: 0,

@@ -12,24 +12,29 @@ export type LayerArrangement = 'radial' | 'tangential';
 export interface WindingCell {
   phase: number; // 0-based phase index (A=0, B=1, ...)
   sign: 1 | -1 | 0; // +1 go, -1 return, 0 empty
+  w?: number; // relative turns of this coil side (default 1); a layer with w = 2 holds twice the turns
 }
 
 /** A matrix of cells, indexed [layer][slot]; layer 0 is closest to the air gap. */
 export type WindingMatrix = WindingCell[][];
 
-/** Parameters of one double-layer sub-winding in a multi-layer winding. */
-export interface LayerPair {
-  pitch: number; // coil pitch in slots
-  shift: number; // star-of-slots sector offset, in phasor steps (2π·t/Q electrical each)
+/**
+ * One layer of a multi-layer winding: the star-of-slots base layer moved by `shift` slots
+ * with polarity `sign`. The standard double layer is [{0,+1}, {y,−1}].
+ */
+export interface LayerDef {
+  shift: number; // slots
+  sign: 1 | -1;
+  turns?: number; // relative turns of the layer (default 1)
 }
 
 export interface WindingSpec {
   slots: number; // Q
   poles: number; // 2p
   phases: number; // m
-  layers: number; // 1, 2, 4, 6, 8 for automatic layouts; any 1..8 for custom
-  coilPitch: number; // y in slots (used by 1- and 2-layer windings and as default for pairs)
-  pairs: LayerPair[]; // only used when layers >= 4 (length = layers / 2)
+  layers: number; // 1..8 (automatic layouts and custom matrices)
+  coilPitch: number; // y in slots (1- and 2-layer windings; default stack for more layers)
+  layerDefs: LayerDef[]; // layer stack, used when layers >= 3 (length = layers)
   parallelPaths: number; // a
   arrangement: LayerArrangement;
   skewSlots: number; // rotor/stator skew in slot pitches

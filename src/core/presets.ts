@@ -1,7 +1,7 @@
 import { baseSpec, withSlotPole } from './defaults';
 import { defaultSlotSpec } from './slots';
 import type { MachineSpec } from './types';
-import { defaultPairs } from './winding/layout';
+import { defaultLayerDefs } from './winding/layout';
 
 export interface Preset {
   id: string;
@@ -64,7 +64,7 @@ export const PRESETS: Preset[] = [
         Bav: 0.6,
         ac: 45000,
         aspectRatio: 2.0,
-        winding: { ...s.winding, coilPitch: 5, parallelPaths: 2, pairs: defaultPairs(4, 5) },
+        winding: { ...s.winding, coilPitch: 5, parallelPaths: 2, layerDefs: defaultLayerDefs(4, 5, 48, 8) },
         statorSlot: { ...defaultSlotSpec('rect_semi'), params: { b0: 2.5, h0: 1, h1: 1, bs: 5, hs: 20 } },
         currentDensity: 6.5,
         fillFactor: 0.5,
@@ -132,13 +132,23 @@ export const PRESETS: Preset[] = [
   {
     id: 'multi12-10',
     label: '12s/10p four-layer SPM (sub-harmonic reduction)',
-    description: 'Two double-layer systems shifted by one star step; sub-harmonic MMF reduced ≈ 73 %.',
+    description: 'Two double-layer systems shifted by 5 slots (one star step); sub-harmonic MMF reduced ≈ 73 %.',
     build: () => {
       const b = PRESETS[3].build();
       return {
         ...b,
         name: '12s/10p four-layer winding demo',
-        winding: { ...b.winding, layers: 4, arrangement: 'radial', pairs: [{ pitch: 1, shift: 0 }, { pitch: 1, shift: 1 }] },
+        winding: {
+          ...b.winding,
+          layers: 4,
+          arrangement: 'radial',
+          layerDefs: [
+            { shift: 0, sign: 1 },
+            { shift: 1, sign: -1 },
+            { shift: 5, sign: 1 },
+            { shift: 6, sign: -1 },
+          ],
+        },
       };
     },
   },

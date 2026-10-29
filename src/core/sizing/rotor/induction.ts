@@ -80,7 +80,7 @@ export function designInductionRotor(
       phases: m,
       layers: 2,
       coilPitch: Math.max(1, Math.round((Qr / poles) * 0.85)),
-      pairs: [],
+      layerDefs: [],
       parallelPaths: 1,
       arrangement: 'radial',
       skewSlots: 0,

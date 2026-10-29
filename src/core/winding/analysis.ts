@@ -65,8 +65,9 @@ function phaseConductors(matrix: WindingMatrix, m: number) {
   for (const row of matrix) {
     row.forEach((c, k) => {
       if (c.sign === 0 || c.phase >= m) return;
-      cond[c.phase][k] += c.sign;
-      sides[c.phase] += 1;
+      const w = c.w ?? 1;
+      cond[c.phase][k] += c.sign * w;
+      sides[c.phase] += w;
     });
   }
   return { cond, sides };

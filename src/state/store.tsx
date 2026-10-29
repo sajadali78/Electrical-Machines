@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useDeferredValue, useEffect, us
 import { baseSpec, topologyDefaults } from '../core/defaults';
 import { runDesign } from '../core/sizing/design';
 import type { DesignResult } from '../core/sizing/result';
-import type { MachineSpec, MachineTopology } from '../core/types';
+import type { MachineSpec, MachineTopology, WindingSpec } from '../core/types';
 import { applyChange, mergeSpec } from './specUtils';
 
 const STORAGE_KEY = 'emds.spec.v1';
@@ -23,6 +23,7 @@ interface Store {
   error: string | null;
   stale: boolean;
   update: (path: string, value: unknown) => void;
+  patchWinding: (patch: Partial<WindingSpec>) => void;
   setSpec: (spec: MachineSpec) => void;
   setTopology: (t: MachineTopology) => void;
   adoptCalculated: () => void;
@@ -59,6 +60,8 @@ export function DesignProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const update = useCallback((path: string, value: unknown) => setSpecState((s) => applyChange(s, path, value)), []);
+  // apply several winding fields at once, bypassing the per-field side effects (used by suggestions)
+  const patchWinding = useCallback((patch: Partial<WindingSpec>) => setSpecState((s) => ({ ...s, winding: { ...s.winding, ...patch, custom: null } })), []);
   const setSpec = useCallback((s: MachineSpec) => setSpecState(mergeSpec(s)), []);
   const setTopology = useCallback((t: MachineTopology) => setSpecState((s) => topologyDefaults(s, t)), []);
   const adoptCalculated = useCallback(() => {
@@ -71,8 +74,8 @@ export function DesignProvider({ children }: { children: ReactNode }) {
   }, [result]);
 
   const value = useMemo<Store>(
-    () => ({ spec, result, error, stale: spec !== deferred, update, setSpec, setTopology, adoptCalculated, toast, notify }),
-    [spec, result, error, deferred, update, setSpec, setTopology, adoptCalculated, toast, notify],
+    () => ({ spec, result, error, stale: spec !== deferred, update, patchWinding, setSpec, setTopology, adoptCalculated, toast, notify }),
+    [spec, result, error, deferred, update, patchWinding, setSpec, setTopology, adoptCalculated, toast, notify],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

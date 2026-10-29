@@ -1,6 +1,6 @@
 import { defaultSlotSpec } from './slots';
 import type { MachineSpec, MachineTopology } from './types';
-import { defaultPairs, defaultPitch } from './winding/layout';
+import { defaultLayerDefs, defaultPitch } from './winding/layout';
 
 /** A complete default specification (15 kW, 4-pole, 400 V, 50 Hz induction motor). */
 export function baseSpec(): MachineSpec {
@@ -29,7 +29,7 @@ export function baseSpec(): MachineSpec {
       phases: 3,
       layers: 2,
       coilPitch: 8,
-      pairs: defaultPairs(4, 8),
+      layerDefs: defaultLayerDefs(4, 8, 36, 4),
       parallelPaths: 1,
       arrangement: 'radial',
       skewSlots: 0,
@@ -98,6 +98,6 @@ export function withSlotPole(spec: MachineSpec, slots: number, poles: number): M
   const pitch = defaultPitch(slots, poles);
   return {
     ...spec,
-    winding: { ...spec.winding, slots, poles, coilPitch: pitch, pairs: defaultPairs(Math.max(4, spec.winding.layers), pitch), custom: null },
+    winding: { ...spec.winding, slots, poles, coilPitch: pitch, layerDefs: defaultLayerDefs(Math.max(3, spec.winding.layers), pitch, slots, poles), custom: null },
   };
 }
