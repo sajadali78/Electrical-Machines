@@ -1,6 +1,7 @@
 import { defaultSlotSpec } from './slots';
 import type { MachineSpec, MachineTopology } from './types';
 import { defaultLayerDefs, defaultPitch } from './winding/layout';
+import { defaultVernier } from './vernier/vernier';
 
 /** A complete default specification (15 kW, 4-pole, 400 V, 50 Hz induction motor). */
 export function baseSpec(): MachineSpec {
@@ -76,6 +77,7 @@ export function baseSpec(): MachineSpec {
       rotorSlots: 0,
       rotorSlot: { ...defaultSlotSpec('rect_open'), params: { bs: 10, hw: 3, hs: 35 } },
     },
+    vernier: defaultVernier(),
   };
 }
 

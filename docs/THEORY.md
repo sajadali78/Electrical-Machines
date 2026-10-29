@@ -188,7 +188,34 @@ About 2/3 of each pole pitch is wound. Slot ampere-conductors are `Θ = 2·F_f /
 
   The rated point is the minimum-current solution within the voltage limit. The capability is the maximum torque on a grid of current angle, current amplitude and (for wound field) field flux, with |i| ≤ I_max and |v| ≤ √2·V_ph. The efficiency map uses minimum-loss solutions. The load-angle curve uses `T(δ) = (m/ω_m)·[V·E₀/X_d·sin δ + V²/2·(1/X_q − 1/X_d)·sin 2δ]`.
 
-## 7. Checks
+## 7. Surface-PM Vernier machine (Vernier tab)
+
+A single slotted stator carries a P_s-pole-pair winding, and the rotor carries P_r pole pairs of surface magnets.
+
+- **Pole-pair rule**: P_r = N_s − P_s (the working field rotates against the rotor) or P_r = N_s + P_s.
+- **Gear ratio**: G = P_r / P_s. **Electrical frequency**: f_e = P_r·n/60.
+- **Slot permeance** (Zhu & Howe, IEEE Trans. Magn. 1993, Part III), relative to μ0/g' with g' = g + h_m/μ_r and ε = b₀/τ_s:
+
+      λ(θ) = λ₀ + Σ λ_n cos(n N_s θ)
+      β = ½ − 1/(2√(1 + (b₀/2g')²))
+      λ₀ = (1/k_C)(1 − 1.6 β ε)
+      λ_n = −(4/nπ) β · 0.78125 sin(1.6π n ε) / (0.78125 − 2 (n ε)²)
+
+  The removable singularity at nε = 0.625 is replaced by its limit.
+- **Rotor field** (slotless): B_m = k_l B_r (h_m/μ_r)/(h_m/μ_r + g), with fundamental B_r1 = (4/π) B_m sin(α_m π/2) at order P_r.
+- **Gap components**:
+  - direct: B_Pr = B_r1 λ₀
+  - working: B_Ps = ½ B_r1 |λ₁| at order |P_r − N_s| = P_s
+  - side-bands at |P_r + j N_s|
+- **Winding factors**: the direct order P_r = N_s ∓ P_s is a slot harmonic of the winding, so k_w(P_r) = k_w(P_s).
+- **EMF**: `E = √2 π f_e N D L (k_w B_Ps/P_s + k_w B_Pr/P_r)`, so E_Ps/E_Pr = G B_Ps/B_Pr. Turns follow from the EMF target.
+- **Torque** (with A the rms electric loading): `T = (π/4) D² L √2 A (k_w G B_Ps + k_w B_Pr)`. This equals m E I / ω_m, and B_eff = G B_Ps + B_Pr acts as the effective gap flux density.
+- **Synchronous inductance**: magnetising inductance of the P_s wave across δ_ef = k_C g + h_m/μ_r, plus slot and differential leakage.
+- **Power factor** (i_d = 0): PF = ψ_m / √(ψ_m² + (L_s Î)²). It falls as G rises, so size the inverter for S = P/(PF·η).
+- **Slot-opening sweep**: modulation (|λ₁|) rises with ε while the mean permeance (1/k_C) falls, giving a torque optimum at intermediate ε.
+- **Limits**: the model uses one slot harmonic and a slotless magnet field, and ignores tooth-tip saturation and rotor leakage between the many poles, so it overestimates torque. Confirm with FEA.
+
+## 8. Checks
 
 Checks flag:
 

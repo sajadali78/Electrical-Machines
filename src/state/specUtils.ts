@@ -1,6 +1,6 @@
 import { baseSpec, withSlotPole } from '../core/defaults';
 import type { MachineSpec } from '../core/types';
-import { defaultLayerDefs } from '../core/winding/layout';
+import { defaultLayerDefs, defaultPitch } from '../core/winding/layout';
 
 /** Immutable set by dotted path (`winding.slots`). */
 export function setIn<T>(obj: T, path: string, value: unknown): T {
@@ -51,5 +51,9 @@ export function applyChange(spec: MachineSpec, path: string, value: unknown): Ma
     next = setIn(next, 'winding.custom', null);
   }
   if (path === 'winding.phases') next = setIn(next, 'winding.custom', null);
+  if (path === 'vernier.slots' || path === 'vernier.ps') {
+    const v = next.vernier;
+    next = setIn(next, 'vernier.coilPitch', defaultPitch(Math.max(3, Math.round(v.slots)), 2 * Math.max(1, Math.round(v.ps))));
+  }
   return next;
 }

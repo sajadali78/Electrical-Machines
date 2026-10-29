@@ -8,6 +8,7 @@ A browser-based design workstation for radial-flux electrical machines. You ente
 - **Winding configuration suggestions** in the style of online winding calculators, extended beyond two layers. For the chosen slots, poles and phases it checks feasibility and ranks every single- and double-layer coil span together with optimised 3…8-layer stacks by k_w1, MMF THD, σ_δ, sub-harmonics or end-winding span, and proposes alternative slot numbers.
 - **Rotor design** for **induction** machines (squirrel cage or wound rotor), **PMSM** (surface or interior V/bar magnets) and **wound-field synchronous** machines (salient or cylindrical rotor).
 - **Equivalent circuit, losses, efficiency and performance**: rated operating point, direct-on-line and inverter torque–speed curves, efficiency map, loss breakdown, and torque versus load angle.
+- **Vernier machine tab**: a surface-PM Vernier (flux-modulation) machine with a single slotted stator. It covers the rotor pole-pair rule P_r = N_s ∓ P_s, gear ratio and electrical frequency, and the air-gap field components from the slot permeance (direct P_r, working P_s, side-bands). It also gives EMF split, torque from the geared output equation, turns, synchronous inductance and power factor, a slot-opening-ratio sweep, the no-load gap-field waveform, a pole-pair option table, the armature winding and a cross-section.
 - **Design-rule checks**, a **loss/mass Pareto optimiser**, and a **multi-layer winding optimiser**.
 - **Exports**: vector PDF specification report, Google Sheets workbook, CSV tables, and design save/load (JSON).
 
@@ -59,6 +60,7 @@ The repository includes `.github/workflows/deploy.yml`. On every push to `main` 
    - **Winding**: configuration suggestions (apply with one click), summary, editable layout matrix, layer-stack editor, developed winding diagram, star of slots, winding functions, MMF with a time slider, harmonic spectrum and table, and the layer-stack optimiser.
    - **Slot / pole**: winding-factor chart over slot and pole counts (click a cell to use it).
    - **Performance**: torque–speed, power, efficiency map, loss donut, efficiency/PF, load angle, equivalent circuit.
+   - **Vernier machine**: independent inputs and results for a surface-PM Vernier machine (see above).
    - **Optimizer**: L/τ × J sweep with the Pareto front of total loss versus active mass.
    - **Calculation sheet**: every input and result with its symbol or formula and unit.
 4. Use **Adopt calculated η / PF** to feed the calculated efficiency and power factor back into the sizing and iterate.

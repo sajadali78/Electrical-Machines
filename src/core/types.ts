@@ -4,6 +4,8 @@
  * Slot shape parameters are the exception: they are entered and stored in mm.
  */
 
+import type { VernierSpec } from './vernier/vernier';
+
 export type MachineTopology = 'induction' | 'pmsm_spm' | 'pmsm_ipm' | 'wound_field';
 export type Connection = 'star' | 'delta';
 export type LayerArrangement = 'radial' | 'tangential';
@@ -138,4 +140,5 @@ export interface MachineSpec {
   induction: InductionSpec;
   pm: PmSpec;
   woundField: WoundFieldSpec;
+  vernier: VernierSpec; // stand-alone surface-PM Vernier machine (Vernier tab)
 }

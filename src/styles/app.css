@@ -179,3 +179,12 @@ table.data td .sym { font-family: var(--font-mono); color: var(--ink-3); }
 .rel { position: relative; }
 .empty-note { color: var(--ink-3); padding: 24px; text-align: center; }
 .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--page); padding: 8px 14px; border-radius: 8px; z-index: 60; font-size: 12.5px; }
+
+/* ---------- Vernier tab ---------- */
+.vernier-layout { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); align-items: start; }
+.vernier-inputs { position: sticky; top: 52px; }
+.data thead[style] th { text-transform: none; }
+@media (max-width: 1180px) {
+  .vernier-layout { grid-template-columns: 1fr; }
+  .vernier-inputs { position: static; }
+}
