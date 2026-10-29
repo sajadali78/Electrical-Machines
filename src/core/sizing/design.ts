@@ -155,7 +155,7 @@ export function runDesign(spec: MachineSpec, opts: DesignOptions = {}): DesignRe
     const start = imSolve(circuit, 1);
     const sT = slipAtMaxTorque(circuit);
     const tmax = imSolve(circuit, sT);
-    const env = opts.lite ? { envelope: [], map: null } : imEnvelopeAndMap(circuit, ls, Erated, rr.op.current, rr.op.speedRpm, nMax, true);
+    const env = opts.lite ? { envelope: [], map: null } : imEnvelopeAndMap(circuit, ls, Erated, rr.op.current * Math.max(1, spec.overloadRatio), rr.op.speedRpm, nMax, true);
     performance = {
       rated: rr.op,
       startTorque: start.T,
@@ -185,7 +185,7 @@ export function runDesign(spec: MachineSpec, opts: DesignOptions = {}): DesignRe
     };
   } else {
     const psiRated = isPM ? (rotor as { psiM: number }).psiM : (rotor as { psiF: number }).psiF;
-    const Imax = Math.SQRT2 * main.Iph * 1.0;
+    const Imax = Math.SQRT2 * main.Iph;
     const mdl: DqModel = {
       m,
       p,
@@ -202,12 +202,12 @@ export function runDesign(spec: MachineSpec, opts: DesignOptions = {}): DesignRe
     const r = dqRatedPoint(mdl, Pout, main.nsRpm, ls, psiAirRated);
     ls.IRated = r.op.current;
     const rr = dqRatedPoint(mdl, Pout, main.nsRpm, ls, psiAirRated);
-    const env = opts.lite ? { envelope: [], map: null } : dqEnvelopeAndMap(mdl, ls, psiAirRated, nMax, true);
+    const env = opts.lite ? { envelope: [], map: null } : dqEnvelopeAndMap({ ...mdl, Imax: Imax * Math.max(1, spec.overloadRatio) }, ls, psiAirRated, nMax, true);
     const tmax = env.envelope.length ? Math.max(...env.envelope.map((e) => e.torque)) : rr.op.torque;
     const E0 = isPM ? st.E : (rotor as { E0: number }).E0;
     const wmR = (2 * Math.PI * main.nsRpm) / 60;
-    const lac = opts.lite ? null : loadAngleCurve(m, wmR, Vph, E0, 2 * Math.PI * f * el.Ld, 2 * Math.PI * f * el.Lq);
-    const pullOut = lac ? Math.max(...lac.map((x) => x.torque)) : tmax;
+    const lac = loadAngleCurve(m, wmR, Vph, E0, 2 * Math.PI * f * el.Ld, 2 * Math.PI * f * el.Lq);
+    const pullOut = Math.max(...lac.map((x) => x.torque));
     const base = env.envelope.find((e, i) => i > 2 && e.torque < 0.97 * env.envelope[1].torque);
     performance = {
       rated: rr.op,

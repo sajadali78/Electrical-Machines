@@ -14,6 +14,7 @@ export function baseSpec(): MachineSpec {
     targetEfficiency: 90.5,
     targetPowerFactor: 0.88,
     maxSpeedRatio: 2,
+    overloadRatio: 1.5,
     Bav: 0.46,
     ac: 28000,
     aspectRatio: 1.25,
@@ -83,7 +84,7 @@ export function topologyDefaults(spec: MachineSpec, topology: MachineTopology): 
   const s: MachineSpec = { ...spec, topology };
   switch (topology) {
     case 'induction':
-      return { ...s, Bav: 0.46, ac: 28000, targetPowerFactor: 0.85, airgapMm: 0 };
+      return { ...s, Bav: 0.46, ac: 28000, targetPowerFactor: 0.88, airgapMm: 0 };
     case 'pmsm_spm':
       return { ...s, Bav: 0.65, ac: 30000, targetPowerFactor: 0.92, airgapMm: 0 };
     case 'pmsm_ipm':

@@ -103,6 +103,7 @@ export interface MachineSpec {
   targetEfficiency: number; // %
   targetPowerFactor: number;
   maxSpeedRatio: number; // n_max / n_rated for torque–speed curves
+  overloadRatio: number; // peak / rated current for the capability envelope and efficiency map
 
   // Specific loadings & main dimensions
   Bav: number; // T

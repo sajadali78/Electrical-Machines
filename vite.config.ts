@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: './',
   plugins: [react()],
+  build: { chunkSizeWarningLimit: 600 }, // the lazily loaded PDF chunk (jsPDF + svg2pdf) is ~520 kB
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

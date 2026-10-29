@@ -12,6 +12,7 @@ export interface ImCircuit {
   R2: number;
   X2: number;
   Xm: number;
+  boost?: number; // V, low-frequency IR compensation added as (1 − f/fₙ)·boost
 }
 
 export interface ImState {
@@ -30,7 +31,7 @@ export interface ImState {
 /** Steady-state T-equivalent circuit at slip s and frequency f (constant V/f below rated f). */
 export function imSolve(c: ImCircuit, s: number, f = c.f): ImState {
   const k = f / c.f;
-  const V = c.V * Math.min(1, k);
+  const V = Math.min(c.V, c.V * k + (c.boost ?? 0) * Math.max(0, 1 - k));
   const s1 = Math.max(1e-7, s);
   const Z2: Complex = cx(c.R2 / s1, c.X2 * k);
   const Zm: Complex = cx(0, c.Xm * k);
@@ -156,6 +157,7 @@ export function imEnvelopeAndMap(
   nMax: number,
   withMap: boolean,
 ): { envelope: CurvePoint[]; map: EfficiencyMap | null } {
+  c = { ...c, boost: c.R1 * Irated };
   const speeds = linspace(Math.max(10, nMax * 0.01), nMax, 60);
   const envelope: CurvePoint[] = [];
   const slips = Array.from({ length: 160 }, (_, i) => Math.exp(Math.log(1e-4) + ((Math.log(0.6) - Math.log(1e-4)) * i) / 159));

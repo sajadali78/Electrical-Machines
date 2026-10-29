@@ -60,6 +60,7 @@ export const PRESETS: Preset[] = [
         targetEfficiency: 96,
         targetPowerFactor: 0.88,
         maxSpeedRatio: 2.5,
+        overloadRatio: 2.2,
         Bav: 0.6,
         ac: 45000,
         aspectRatio: 2.0,

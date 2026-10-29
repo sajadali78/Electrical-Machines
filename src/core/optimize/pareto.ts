@@ -52,7 +52,10 @@ export function optimizeDesign(
       }
     }
   }
-  const cand = pts.filter((p) => p.feasible && Number.isFinite(p.totalLoss));
+  // Pareto front among feasible designs; if none passes the checks, among all designs.
+  const finite = pts.filter((p) => Number.isFinite(p.totalLoss));
+  const feasible = finite.filter((p) => p.feasible);
+  const cand = feasible.length ? feasible : finite;
   for (const p of cand) {
     p.pareto = !cand.some((q) => q !== p && q.totalLoss <= p.totalLoss && q.activeMass <= p.activeMass && (q.totalLoss < p.totalLoss || q.activeMass < p.activeMass));
   }

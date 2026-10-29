@@ -18,6 +18,34 @@ export interface IpmPoleGeometry {
   innerRadius: number; // smallest radius of any magnet corner
 }
 
+/** Magnet rectangles for a pole with the V apex (or bar outer face) at radius `xa`. */
+export function ipmMagnetRects(layout: 'v' | 'bar', xa: number, hm: number, wm: number, vAngle: number, bridge: number): [number, number][][] {
+  if (layout === 'bar') {
+    return [
+      [
+        [xa, -wm / 2],
+        [xa, wm / 2],
+        [xa - hm, wm / 2],
+        [xa - hm, -wm / 2],
+      ],
+    ];
+  }
+  const c = Math.cos(vAngle / 2);
+  const s = Math.sin(vAngle / 2);
+  const rect = (sgn: 1 | -1): [number, number][] => {
+    const S: [number, number] = [xa, sgn * bridge * 0.5];
+    const d: [number, number] = [c, sgn * s];
+    const n: [number, number] = [s, -sgn * c]; // towards the inside of the V
+    return [
+      S,
+      [S[0] + wm * d[0], S[1] + wm * d[1]],
+      [S[0] + wm * d[0] - hm * n[0], S[1] + wm * d[1] - hm * n[1]],
+      [S[0] - hm * n[0], S[1] - hm * n[1]],
+    ];
+  };
+  return [rect(1), rect(-1)];
+}
+
 export function ipmPoleGeometry(
   layout: 'v' | 'bar',
   Rr: number,
@@ -29,32 +57,7 @@ export function ipmPoleGeometry(
   poles: number,
 ): IpmPoleGeometry {
   const halfPitch = Math.PI / poles;
-  const build = (xa: number): [number, number][][] => {
-    if (layout === 'bar') {
-      return [
-        [
-          [xa, -wm / 2],
-          [xa, wm / 2],
-          [xa - hm, wm / 2],
-          [xa - hm, -wm / 2],
-        ],
-      ];
-    }
-    const c = Math.cos(vAngle / 2);
-    const s = Math.sin(vAngle / 2);
-    const rect = (sgn: 1 | -1): [number, number][] => {
-      const S: [number, number] = [xa, sgn * bridge * 0.5];
-      const d: [number, number] = [c, sgn * s];
-      const n: [number, number] = [s, -sgn * c]; // towards the inside of the V
-      return [
-        S,
-        [S[0] + wm * d[0], S[1] + wm * d[1]],
-        [S[0] + wm * d[0] - hm * n[0], S[1] + wm * d[1] - hm * n[1]],
-        [S[0] - hm * n[0], S[1] - hm * n[1]],
-      ];
-    };
-    return [rect(1), rect(-1)];
-  };
+  const build = (xa: number) => ipmMagnetRects(layout, xa, hm, wm, vAngle, bridge);
   const outerOK = (xa: number) => {
     const mags = build(xa);
     let rMax = 0;
