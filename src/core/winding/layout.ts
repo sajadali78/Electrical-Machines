@@ -1,5 +1,5 @@
 import { TWO_PI, gcd, mod } from '../math';
-import type { LayerPair, WindingCell, WindingMatrix, WindingSpec } from '../types';
+import type { LayerDef, WindingCell, WindingMatrix, WindingSpec } from '../types';
 import { starOfSlots } from './starOfSlots';
 
 /** A coil: go side in (layer, slot) and return side in (layer, slot). */
@@ -94,9 +94,78 @@ function singleLayer(Q: number, poles: number, m: number, pitch: number) {
   return { matrix, coils, notes };
 }
 
-/** Default layer pairs for a multi-layer winding: same pitch, successive one-step sector shifts. */
-export function defaultPairs(layers: number, pitch: number): LayerPair[] {
-  return Array.from({ length: Math.max(1, Math.floor(layers / 2)) }, (_, j) => ({ pitch, shift: j }));
+/**
+ * Smallest physical slot shift that rotates the winding by exactly one star-of-slots step
+ * (2π·t/Q electrical) without relabelling phases: k·p ≡ t (mod Q).
+ */
+export function starStepShift(Q: number, poles: number): number {
+  const p = poles / 2;
+  const t = gcd(Q, p);
+  for (let k = 1; k < Q; k++) if (mod(k * p, Q) === t % Q) return k;
+  return 1;
+}
+
+/**
+ * Default layer stack: pairs of (go, return) layers like a double layer with pitch y, each
+ * further pair rotated by one star step; an odd layer count ends with an unpaired go layer.
+ */
+export function defaultLayerDefs(layers: number, pitch: number, Q: number, poles: number): LayerDef[] {
+  const step = starStepShift(Q, poles);
+  return Array.from({ length: Math.max(1, layers) }, (_, l) => {
+    const base = mod(Math.floor(l / 2) * step, Q);
+    return l % 2 === 0 ? { shift: base, sign: 1 as const } : { shift: mod(base + pitch, Q), sign: -1 as const };
+  });
+}
+
+/** Base layer of the star of slots (the top layer of a double-layer winding). */
+export function baseLayer(Q: number, poles: number, m: number): WindingCell[] {
+  return starOfSlots(Q, poles, m).phasors.map((ph) => ({ phase: ph.phase, sign: ph.sign }));
+}
+
+/** Layer `def` applied to the base layer: cell k takes the base cell k − shift with polarity `sign`. */
+export function shiftedLayer(base: WindingCell[], def: LayerDef): WindingCell[] {
+  const Q = base.length;
+  return base.map((_, k) => {
+    const c = base[mod(k - Math.round(def.shift), Q)];
+    return c.sign === 0 ? { ...c } : { phase: c.phase, sign: (c.sign * def.sign) as 1 | -1 };
+  });
+}
+
+/** Coil sides per phase with + and − polarity; a winding can only be closed into coils if they match. */
+export function polarityBalance(matrix: WindingMatrix, m: number): boolean {
+  const plus = new Array<number>(m).fill(0);
+  const minus = new Array<number>(m).fill(0);
+  for (const row of matrix) for (const c of row) if (c.sign > 0) plus[c.phase]++;
+  else if (c.sign < 0) minus[c.phase]++;
+  return plus.every((v, j) => v === minus[j]);
+}
+
+/** Build an L-layer winding (L ≥ 2) from a layer stack. */
+function stackedLayout(Q: number, poles: number, m: number, defs: LayerDef[], pitch: number) {
+  const base = baseLayer(Q, poles, m);
+  const matrix = defs.map((d) => shiftedLayer(base, d));
+  const coils: Coil[] = [];
+  const paired = new Set<number>();
+  // consecutive layers of opposite polarity form coils exactly like a double layer
+  for (let l = 0; l + 1 < defs.length; l += 2) {
+    if (defs[l].sign !== -defs[l + 1].sign) continue;
+    const span = mod(Math.round(defs[l + 1].shift) - Math.round(defs[l].shift), Q);
+    if (span === 0) continue;
+    paired.add(l).add(l + 1);
+    for (let k = 0; k < Q; k++) {
+      const c = matrix[l][k];
+      if (c.sign === 0) continue;
+      const go = c.sign === 1 ? { layer: l, slot: k } : { layer: l + 1, slot: mod(k + span, Q) };
+      const ret = c.sign === 1 ? { layer: l + 1, slot: mod(k + span, Q) } : { layer: l, slot: k };
+      coils.push({ phase: c.phase, sign: 1, go, ret });
+    }
+  }
+  // remaining layers: pair coil sides greedily
+  if (paired.size < defs.length) {
+    const rest = matrix.map((row, l) => (paired.has(l) ? row.map(() => ({ ...EMPTY })) : row));
+    coils.push(...inferCoils(rest, pitch));
+  }
+  return { matrix, coils };
 }
 
 /** Generate the winding matrix and coil list from a winding specification. */
@@ -118,18 +187,12 @@ export function generateLayout(spec: WindingSpec): WindingLayout {
     return { matrix: [d.top, d.bottom], coils: d.coils, layers: 2, kind: 'double', notes: [] };
   }
 
-  const nPairs = Math.floor(spec.layers / 2);
-  const pairs = spec.pairs.length >= nPairs ? spec.pairs.slice(0, nPairs) : defaultPairs(spec.layers, pitch);
-  const step = starStep(Q, poles);
-  const matrix: WindingMatrix = [];
-  const coils: Coil[] = [];
-  pairs.forEach((pair, j) => {
-    const d = doubleLayer(Q, poles, m, Math.max(1, Math.round(pair.pitch)), pair.shift * step, 2 * j);
-    matrix.push(d.top, d.bottom);
-    coils.push(...d.coils);
-  });
-  const notes = spec.layers % 2 === 1 ? [`Odd layer count: automatic layouts use ${2 * nPairs} layers; edit the matrix for custom layer counts.`] : [];
-  return { matrix, coils, layers: matrix.length, kind: 'multi', notes };
+  const L = Math.min(8, Math.round(spec.layers));
+  const defs = spec.layerDefs && spec.layerDefs.length >= L ? spec.layerDefs.slice(0, L) : defaultLayerDefs(L, pitch, Q, poles);
+  const { matrix, coils } = stackedLayout(Q, poles, m, defs, pitch);
+  const notes: string[] = [];
+  if (!polarityBalance(matrix, m)) notes.push('The + and − coil sides of a phase are unequal, so not all coil sides can be closed into coils. Use an even layer count or a different stack.');
+  return { matrix, coils, layers: L, kind: 'multi', notes };
 }
 
 /**

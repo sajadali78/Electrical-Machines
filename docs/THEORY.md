@@ -56,7 +56,26 @@ Slot k has EMF phasor angle `α_k = k·2πp/Q`. The phasors are sorted into 2m p
 - **Single layer**:
   - If Q is divisible by 2p, each whole slot is classified (equivalent to a full-pitch double layer).
   - Otherwise every second coil of an odd-pitch double layer is kept (alternate-teeth windings).
-- **Multi-layer (4, 6, 8 layers)**: a superposition of double-layer sub-windings j, each with its own pitch y_j and a sector rotation of `s_j` star steps (each step is 2π·t/Q electrical, t = gcd(Q, p)). Rotating the phase belts keeps every sub-winding balanced. It shifts the working harmonic by s_j steps and other harmonics by different amounts, so chosen harmonics cancel. For example, a 12-slot/10-pole winding with s = (0, 1) reduces the first sub-harmonic by about 73 % while k_w1 drops from 0.933 to 0.901.
+- **Any number of layers (layer stack)**: every layer l is the base layer (the top layer of the double layer above) shifted by d_l slots with polarity s_l = ±1.
+  - The standard double layer is the stack `[0+, y−]`.
+  - More layers add shifted copies. Because every phase is shifted equally, any stack built from a balanced base layer stays balanced.
+  - The default stack for L layers is a series of (go, return) pairs, each further pair rotated by one star step (2π·t/Q electrical, t = gcd(Q, p)). The physical shift for that is the k with k·p ≡ t (mod Q). An odd count ends with an unpaired go layer.
+  - Odd layer counts (3, 5, 7) are possible when each phase keeps equal numbers of + and − coil sides. That always holds if the base layer is polarity-balanced, and otherwise requires Σ s_l = 0.
+  - Example: the four-layer 12-slot/10-pole stack `[0+, 1−, 5+, 6−]` reduces the first sub-harmonic by about 73 % while k_w1 drops from 0.933 to 0.901.
+  - Example: `[0+, 1−, 2+]` is a three-layer winding with k_w1 = 0.880.
+  - In anti-periodic windings a shift of Q/(2t) only flips the polarity, so two layers can coincide electrically. The slot then holds the same coil side twice, which is a winding with unequal turns per layer. Such stacks are allowed and labelled.
+- **Fast evaluation of stacks**: with layer factor `F_ν = Σ_l s_l·e^{−jν·2π·d_l/Q}`, the spectrum of a stack is the base spectrum times F_ν:
+  - `k_w,ν = k_w,ν(base)·|F_ν| / L`
+  - `F_ν(MMF) = F_ν(base MMF)·|F_ν|`
+
+  This makes exhaustive or coordinate-descent searches over shifts and polarities cheap. The stack optimiser and the suggestions use it.
+- **Configuration suggestions**: for given Q, 2p and m, the app
+  - checks feasibility (Q/(m·t) integer)
+  - lists single-layer windings (full pitch, or odd spans for alternate-teeth windings)
+  - lists every double-layer coil span from about 0.6 of full pitch to full pitch
+  - adds the best optimised stacks for 3…N layers
+
+  Results are ranked by k_w1, MMF THD, σ_δ, sub-harmonic content or average coil span (end-winding length). A second table proposes alternative slot numbers for the same pole count, with LCM (cogging) and GCD (unbalanced magnetic pull).
 - **Custom**: any matrix [layer][slot] of (phase, ±). Coils are inferred by greedy pairing.
 
 ### Winding function and harmonics

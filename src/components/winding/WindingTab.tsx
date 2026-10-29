@@ -5,7 +5,8 @@ import { useDesign } from '../../state/store';
 import { fmt, phaseColor } from '../../ui/format';
 import { Segmented } from '../inputs/SelectField';
 import { HarmonicsPanel } from './HarmonicsPanel';
-import { LayerOptimizer, LayerPairsEditor } from './LayerControls';
+import { LayerOptimizer, LayerStackEditor } from './LayerControls';
+import { SuggestionsPanel } from './SuggestionsPanel';
 import { StarOfSlots } from './StarOfSlots';
 import { WindingDiagram } from './WindingDiagram';
 import { MmfPlot, WindingFunctionPlot } from './WindingFunctionPlot';
@@ -74,6 +75,16 @@ export function WindingTab() {
 
       <div className="panel">
         <div className="panel-head">
+          <h3>Winding configuration suggestions</h3>
+          <span className="sub">Feasible coil spans and layer counts for this slot/pole combination, ranked; click a column to sort</span>
+        </div>
+        <div className="panel-body">
+          <SuggestionsPanel />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
           <h3>Winding layout</h3>
           <span className="sub">{custom ? 'Click a cell to cycle A+ → A− → B+ … → empty' : 'Generated from the star of slots'}</span>
           <div className="spacer" />
@@ -81,7 +92,7 @@ export function WindingTab() {
             <Segmented
               label="Layers"
               value={String(w.layers)}
-              options={['1', '2', '4', '6', '8'].map((v) => ({ value: v, label: `${v}L` }))}
+              options={['1', '2', '3', '4', '5', '6', '7', '8'].map((v) => ({ value: v, label: `${v}L` }))}
               onChange={(v) => update('winding.layers', +v)}
             />
           )}
@@ -110,7 +121,7 @@ export function WindingTab() {
               {n}
             </p>
           ))}
-          {!custom && w.layers >= 4 && <LayerPairsEditor />}
+          {!custom && w.layers >= 3 && <LayerStackEditor />}
         </div>
       </div>
 
@@ -174,11 +185,11 @@ export function WindingTab() {
         </div>
       </div>
 
-      {!custom && w.layers >= 4 && (
+      {!custom && w.layers >= 3 && (
         <div className="panel">
           <div className="panel-head">
-            <h3>Multi-layer optimiser</h3>
-            <span className="sub">Exhaustive search over sub-winding pitches and sector shifts</span>
+            <h3>Layer-stack optimiser</h3>
+            <span className="sub">Searches the shift and polarity of every layer for the chosen objective</span>
           </div>
           <div className="panel-body">
             <LayerOptimizer />

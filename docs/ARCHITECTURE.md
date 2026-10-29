@@ -6,6 +6,7 @@ MachineSpec (inputs, JSON-serialisable)
       ▼
 runDesign(spec)  ── src/core/sizing/design.ts
   1. generateLayout(winding)          → winding matrix [layer][slot] + coil list
+                                        (1 layer, double layer, or a stack of shifted base layers)
   2. analyzeWinding (fast)            → k_w1 (with skew) for the output equation
   3. mainDimensions                   → S, C₀, D²L, D, L, τ, g
   4. flux definition per topology     → B_av, Φ₁/Φ, peak B_g (PM: magnet sizing first)

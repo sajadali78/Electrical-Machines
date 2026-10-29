@@ -110,7 +110,7 @@ export function CrossSection({ r, opts, svgId }: { r: DesignResult; opts: CrossS
               <path d={c.d} fill={c.sign ? phaseColor(c.phase) : 'var(--surface-2)'} stroke="var(--surface)" strokeWidth={sw * 0.8} opacity={hl === `stator-slot:${c.slot}` ? 0.75 : 1} />
               {c.sign < 0 && <path d={c.d} fill="url(#hatch)" pointerEvents="none" />}
               {showLabels && c.sign !== 0 && (
-                <text x={c.cx} y={c.cy} dy={labelSize * 0.35} fontSize={labelSize} textAnchor="middle" fill={c.phase === 2 ? '#0b0b0b' : '#ffffff'} fontWeight={700} pointerEvents="none">
+                <text x={c.cx} y={c.cy} dy={Math.min(labelSize, c.label) * 0.35} fontSize={Math.min(labelSize, c.label)} textAnchor="middle" fill={c.phase === 2 ? '#0b0b0b' : '#ffffff'} fontWeight={700} pointerEvents="none">
                   {phaseName(c.phase)}
                   {c.sign > 0 ? '+' : '−'}
                 </text>
