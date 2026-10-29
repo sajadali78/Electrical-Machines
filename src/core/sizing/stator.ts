@@ -30,7 +30,7 @@ export function designStator(spec: MachineSpec, main: MainDimensions, layout: Wi
   const Q = spec.winding.slots;
   const m = main.m;
   const a = Math.max(1, Math.round(spec.winding.parallelPaths));
-  const layers = Math.max(1, layout.layers);
+  const layers = Math.max(1, layout.units); // turns units per slot (a double-turn layer counts twice)
   const kfe = spec.stackingFactor;
   const { D, L, tau, f } = main;
   const slotPitch = (Math.PI * D) / Q;

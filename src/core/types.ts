@@ -12,6 +12,7 @@ export type LayerArrangement = 'radial' | 'tangential';
 export interface WindingCell {
   phase: number; // 0-based phase index (A=0, B=1, ...)
   sign: 1 | -1 | 0; // +1 go, -1 return, 0 empty
+  w?: number; // relative turns of this coil side (default 1); a layer with w = 2 holds twice the turns
 }
 
 /** A matrix of cells, indexed [layer][slot]; layer 0 is closest to the air gap. */
@@ -24,6 +25,7 @@ export type WindingMatrix = WindingCell[][];
 export interface LayerDef {
   shift: number; // slots
   sign: 1 | -1;
+  turns?: number; // relative turns of the layer (default 1)
 }
 
 export interface WindingSpec {

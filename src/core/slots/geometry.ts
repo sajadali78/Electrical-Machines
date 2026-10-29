@@ -105,15 +105,24 @@ export function mirrorHalf(half: readonly Pt[]): Pt[] {
 
 /** Split a conductor region into `n` equal-area layers, ordered from the air gap outwards (radial) or left to right. */
 export function splitEqualArea(poly: readonly Pt[], n: number, arrangement: 'radial' | 'tangential'): Pt[][] {
+  return splitByWeights(poly, Array.from({ length: n }, () => 1), arrangement);
+}
+
+/** Split a conductor region into layers whose areas are proportional to `weights`. */
+export function splitByWeights(poly: readonly Pt[], weights: readonly number[], arrangement: 'radial' | 'tangential'): Pt[][] {
+  const n = weights.length;
   if (n <= 1) return [poly.slice()];
   const axis: 0 | 1 = arrangement === 'radial' ? 0 : 1;
   const b = bounds([poly as Pt[]]);
   const lo = axis === 0 ? b.uMin : b.vMin;
   const hi = axis === 0 ? b.uMax : b.vMax;
   const A = polygonArea(poly);
+  const W = weights.reduce((s, w) => s + w, 0) || 1;
   const cuts = [lo];
+  let acc = 0;
   for (let i = 1; i < n; i++) {
-    const target = (A * i) / n;
+    acc += weights[i - 1];
+    const target = (A * acc) / W;
     let a = lo;
     let c = hi;
     for (let it = 0; it < 60; it++) {

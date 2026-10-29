@@ -1,7 +1,7 @@
 import { TWO_PI, gcd } from '../math';
 import type { LayerDef, WindingCell } from '../types';
 import { slotAngle } from './analysis';
-import { baseLayer, defaultLayerDefs } from './layout';
+import { baseLayer, defaultLayerDefs, layerTurns } from './layout';
 import { phaseAxis } from './phases';
 
 export type LayerObjective = 'thd' | 'sigma' | 'subharmonics' | 'kw1';
@@ -107,12 +107,17 @@ export function canonicalLayer(bs: BaseSpectrum, d: LayerDef): string {
   const s = ((Math.round(d.shift) % bs.Q) + bs.Q) % bs.Q;
   const flips = Math.floor(s / P);
   const sign = bs.antiperiodic && flips % 2 === 1 ? -d.sign : d.sign;
-  return `${s % P}${sign > 0 ? '+' : '-'}`;
+  return `${s % P}${sign > 0 ? '+' : '-'}${layerTurns(d) > 1 ? `x${layerTurns(d)}` : ''}`;
 }
 
 /** True when two layers coincide electrically: the slot then holds the same coil side twice (unequal turns per layer). */
 export function hasDuplicateLayers(bs: BaseSpectrum, defs: LayerDef[]): boolean {
   const keys = defs.map((d) => canonicalLayer(bs, d));
+  return new Set(keys).size < keys.length;
+}
+
+function hasDuplicateLayersIgnoringTurns(bs: BaseSpectrum, defs: LayerDef[]): boolean {
+  const keys = defs.map((d) => canonicalLayer(bs, { shift: d.shift, sign: d.sign }));
   return new Set(keys).size < keys.length;
 }
 
@@ -122,14 +127,16 @@ export function stackMetrics(bs: BaseSpectrum, defs: LayerDef[]): StackMetrics {
   const Q = bs.Q;
   const { cos, sin } = trig(Q);
   const shifts = defs.map((d) => ((Math.round(d.shift) % Q) + Q) % Q);
+  const wts = defs.map((d) => d.sign * layerTurns(d));
+  const units = defs.reduce((s, d) => s + layerTurns(d), 0);
   // e^(−jν·2πd/Q) depends only on (ν·d) mod Q, so a Q-entry table suffices
   const F = (nu: number) => {
     let re = 0;
     let im = 0;
     for (let l = 0; l < L; l++) {
       const k = (nu * shifts[l]) % Q;
-      re += defs[l].sign * cos[k];
-      im -= defs[l].sign * sin[k];
+      re += wts[l] * cos[k];
+      im -= wts[l] * sin[k];
     }
     return Math.hypot(re, im);
   };
@@ -143,13 +150,14 @@ export function stackMetrics(bs: BaseSpectrum, defs: LayerDef[]): StackMetrics {
     thd2 += a * a;
     if (nu < bs.p && work > 0) sub += a / work;
   }
-  const netSign = defs.reduce((s, d) => s + d.sign, 0);
+  const netTurns = wts.reduce((s, w) => s + w, 0);
+  void L;
   return {
-    kw1: (bs.kw[bs.p] * Fp) / L,
+    kw1: (bs.kw[bs.p] * Fp) / units,
     thd: work > 0 ? Math.sqrt(thd2) / work : Infinity,
     sigma: work > 0 ? thd2 / (work * work) : Infinity,
     subharmonics: sub,
-    closable: bs.netPolarity === 0 || netSign === 0,
+    closable: bs.netPolarity === 0 || netTurns === 0,
   };
 }
 
@@ -186,6 +194,8 @@ export function optimizeLayerStack(
   if (!bs.balanced) return [];
   const found = new Map<string, LayerCandidate>();
   const consider = (defs: LayerDef[]) => {
+    // layers that coincide electrically are just one layer with more turns, which the turns option covers
+    if (hasDuplicateLayersIgnoringTurns(bs, defs)) return Infinity;
     const met = stackMetrics(bs, defs);
     if (!met.closable || met.kw1 < minKw1 || !Number.isFinite(met.thd)) return Infinity;
     const score = scoreOf(met, objective);
@@ -196,16 +206,20 @@ export function optimizeLayerStack(
     return score;
   };
 
-  const space = (2 * Q) ** (L - 1);
+  // per-layer options: shift, polarity and turns (1 or 2; a double-turn layer is how odd layer
+  // counts close for every slot/pole combination)
+  const options: LayerDef[] = [];
+  for (let d = 0; d < Q; d++) for (const sign of [1, -1] as const) for (const turns of [1, 2]) options.push(turns === 1 ? { shift: d, sign } : { shift: d, sign, turns });
+  consider(defaultLayerDefs(L, pitch, Q, poles));
+  const space = options.length ** (L - 1);
   if (space <= 40000) {
     const defs: LayerDef[] = [{ shift: 0, sign: 1 }];
     const rec = (l: number) => {
       if (l === L) return void consider(defs);
-      for (let d = 0; d < Q; d++)
-        for (const sign of [1, -1] as const) {
-          defs[l] = { shift: d, sign };
-          rec(l + 1);
-        }
+      for (const o of options) {
+        defs[l] = o;
+        rec(l + 1);
+      }
     };
     rec(1);
   } else {
@@ -213,7 +227,7 @@ export function optimizeLayerStack(
     let seed = 12345;
     const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
     const starts: LayerDef[][] = [defaultLayerDefs(L, pitch, Q, poles)];
-    for (let r = 0; r < 12; r++) starts.push([{ shift: 0, sign: 1 }, ...Array.from({ length: L - 1 }, () => ({ shift: Math.floor(rnd() * Q), sign: (rnd() < 0.5 ? 1 : -1) as 1 | -1 }))]);
+    for (let r = 0; r < 12; r++) starts.push([{ shift: 0, sign: 1 }, ...Array.from({ length: L - 1 }, () => options[Math.floor(rnd() * options.length)])]);
     for (const start of starts) {
       const cur = start.map((d) => ({ ...d }));
       let best = consider(cur);
@@ -222,16 +236,15 @@ export function optimizeLayerStack(
         for (let l = 1; l < L; l++) {
           const keep = cur[l];
           let bestHere = keep;
-          for (let d = 0; d < Q; d++)
-            for (const sign of [1, -1] as const) {
-              cur[l] = { shift: d, sign };
-              const s = consider(cur);
-              if (s < best - 1e-12) {
-                best = s;
-                bestHere = cur[l];
-                improved = true;
-              }
+          for (const o of options) {
+            cur[l] = o;
+            const s = consider(cur);
+            if (s < best - 1e-12) {
+              best = s;
+              bestHere = o;
+              improved = true;
             }
+          }
           cur[l] = bestHere;
         }
         if (!improved) break;

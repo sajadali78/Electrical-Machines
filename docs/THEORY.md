@@ -56,16 +56,19 @@ Slot k has EMF phasor angle `α_k = k·2πp/Q`. The phasors are sorted into 2m p
 - **Single layer**:
   - If Q is divisible by 2p, each whole slot is classified (equivalent to a full-pitch double layer).
   - Otherwise every second coil of an odd-pitch double layer is kept (alternate-teeth windings).
-- **Any number of layers (layer stack)**: every layer l is the base layer (the top layer of the double layer above) shifted by d_l slots with polarity s_l = ±1.
+- **Any number of layers (layer stack)**: every layer l is the base layer (the top layer of the double layer above) shifted by d_l slots with polarity s_l = ±1 and relative turns w_l (1 by default). A layer with w_l = 2 takes twice the slot area.
   - The standard double layer is the stack `[0+, y−]`.
   - More layers add shifted copies. Because every phase is shifted equally, any stack built from a balanced base layer stays balanced.
-  - The default stack for L layers is a series of (go, return) pairs, each further pair rotated by one star step (2π·t/Q electrical, t = gcd(Q, p)). The physical shift for that is the k with k·p ≡ t (mod Q). An odd count ends with an unpaired go layer.
-  - Odd layer counts (3, 5, 7) are possible when each phase keeps equal numbers of + and − coil sides. That always holds if the base layer is polarity-balanced, and otherwise requires Σ s_l = 0.
+  - The default stack for an even L is a series of (go, return) pairs, each further pair rotated by one star step (2π·t/Q electrical, t = gcd(Q, p)). The physical shift for that is the k with k·p ≡ t (mod Q).
+  - **Three layers for every slot/pole combination**: an odd L ends with the group `[b+ ×1, (b+y)− ×2, (b+2y)+ ×1]`. These are two double layers (pitches +y and −y) whose return sides share the middle layer, which therefore carries double turns. Its layer factor is (1 − e^{−jνyθ_s})², so `k_w1 = k_w1,base·k_p²`. Pitch harmonics are suppressed twice, and the winding always closes into coils.
+  - Equal-turn odd stacks only close when every layer is polarity-balanced on its own. That fails whenever Q/m is odd (each layer then has an odd surplus of coil sides per phase), for example 9 slots/8 poles. The closing condition is Σ s_l·w_l = 0 whenever the base layer is unbalanced.
+  - The optimiser searches the shift, polarity and turns (×1 or ×2) of every layer. It rejects stacks in which two layers coincide electrically, since those are one layer with more turns.
   - Example: the four-layer 12-slot/10-pole stack `[0+, 1−, 5+, 6−]` reduces the first sub-harmonic by about 73 % while k_w1 drops from 0.933 to 0.901.
-  - Example: `[0+, 1−, 2+]` is a three-layer winding with k_w1 = 0.880.
+  - Example: `[0+, 1−, 2+]` is a three-layer 12-slot/10-pole winding with k_w1 = 0.880.
+  - Example: 9 slots/8 poles has no equal-turn three-layer winding, but `[0+, 1−×2, 2+]` gives k_w1 = 0.931.
   - In anti-periodic windings a shift of Q/(2t) only flips the polarity, so two layers can coincide electrically. The slot then holds the same coil side twice, which is a winding with unequal turns per layer. Such stacks are allowed and labelled.
-- **Fast evaluation of stacks**: with layer factor `F_ν = Σ_l s_l·e^{−jν·2π·d_l/Q}`, the spectrum of a stack is the base spectrum times F_ν:
-  - `k_w,ν = k_w,ν(base)·|F_ν| / L`
+- **Fast evaluation of stacks**: with layer factor `F_ν = Σ_l s_l·w_l·e^{−jν·2π·d_l/Q}`, the spectrum of a stack is the base spectrum times F_ν:
+  - `k_w,ν = k_w,ν(base)·|F_ν| / Σ w_l`
   - `F_ν(MMF) = F_ν(base MMF)·|F_ν|`
 
   This makes exhaustive or coordinate-descent searches over shifts and polarities cheap. The stack optimiser and the suggestions use it.

@@ -5,7 +5,7 @@ import { optimizeLayerStack, type LayerCandidate, type LayerObjective } from '..
 import { useDesign } from '../../state/store';
 import { fmt } from '../../ui/format';
 
-export const stackLabel = (defs: LayerDef[]) => defs.map((d) => `${d.shift}${d.sign > 0 ? '+' : '−'}`).join(' · ');
+export const stackLabel = (defs: LayerDef[]) => defs.map((d) => `${d.shift}${d.sign > 0 ? '+' : '−'}${(d.turns ?? 1) > 1 ? `×${d.turns}` : ''}`).join(' · ');
 
 /** Editor for the layer stack of a winding with three or more layers. */
 export function LayerStackEditor() {
@@ -23,6 +23,7 @@ export function LayerStackEditor() {
             <th>Layer</th>
             <th className="num">Slot shift d</th>
             <th>Polarity</th>
+            <th className="num">Turns</th>
             <th className="num">Electrical shift d·α_e</th>
           </tr>
         </thead>
@@ -39,6 +40,15 @@ export function LayerStackEditor() {
                   <option value={-1}>− (return)</option>
                 </select>
               </td>
+              <td className="num">
+                <select className="select" value={d.turns ?? 1} onChange={(e) => setDef(l, { turns: +e.target.value })}>
+                  {[1, 2, 3, 4].map((t) => (
+                    <option key={t} value={t}>
+                      ×{t}
+                    </option>
+                  ))}
+                </select>
+              </td>
               <td className="num">{fmt(((d.shift * alphaE) % 360 + 360) % 360, 1)}°</td>
             </tr>
           ))}
@@ -51,7 +61,8 @@ export function LayerStackEditor() {
       </div>
       <p className="hint">
         Every layer is the star-of-slots base layer shifted by <i>d</i> slots with the chosen polarity. The standard double layer is <span className="mono">0+ · y−</span>; extra layers add shifted
-        copies that cancel selected MMF harmonics. Odd layer counts are possible when each phase keeps equal numbers of + and − coil sides.
+        copies that cancel selected MMF harmonics. A layer with ×2 turns holds the coil sides of two coil groups (it takes twice the slot area); the default 3-layer stack
+        <span className="mono"> b+ · (b+y)−×2 · (b+2y)+</span> uses this so that a 3-layer winding closes into coils for every slot/pole combination.
       </p>
     </div>
   );

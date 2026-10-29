@@ -1,7 +1,7 @@
 import { gcd, lcm } from '../math';
 import type { LayerDef, WindingSpec } from '../types';
 import { analyzeWinding } from './analysis';
-import { defaultPitch, generateLayout } from './layout';
+import { defaultLayerDefs, defaultPitch, generateLayout } from './layout';
 import { baseSpectrum, hasDuplicateLayers, optimizeLayerStack, type LayerObjective } from './optimizeLayers';
 
 export interface WindingSuggestion {
@@ -117,9 +117,13 @@ export function suggestWindings(Q: number, poles: number, m: number, maxLayers =
   const kwRef = best2?.kw1 ?? 0.9;
   const bs = baseSpectrum(Q, poles, m, p);
   for (let L = 3; L <= Math.min(8, maxLayers); L++) {
-    const cands = optimizeLayerStack(Q, poles, m, L, pitch, objective, 0.9 * kwRef, 3);
+    // every layer count must be offered: relax the k_w1 floor, finally fall back to the default stack
+    let cands = optimizeLayerStack(Q, poles, m, L, pitch, objective, 0.9 * kwRef, 3);
+    if (!cands.length) cands = optimizeLayerStack(Q, poles, m, L, pitch, objective, 0.3, 3);
+    if (!cands.length) cands = [{ defs: defaultLayerDefs(L, pitch, Q, poles), kw1: 0, thd: 0, sigma: 0, subharmonics: 0, score: 0 }];
     cands.forEach((c, i) => {
       const tags = [`optimised (${objective === 'thd' ? 'min THD' : objective})`];
+      if (c.defs.some((d) => (d.turns ?? 1) > 1)) tags.push('double-turn layer');
       if (hasDuplicateLayers(bs, c.defs)) tags.push('layers coincide (unequal turns)');
       const s = evaluate({ ...baseSpec(Q, poles, m), layers: L, coilPitch: pitch, layerDefs: c.defs }, `L${L}-${i}`, tags);
       if (s) out.push(s);
@@ -128,9 +132,14 @@ export function suggestWindings(Q: number, poles: number, m: number, maxLayers =
 
   // drop weak options and stacks that behave exactly like a configuration with fewer layers
   const kept: WindingSuggestion[] = [];
-  for (const s of out.sort((a, b) => a.layers - b.layers)) {
-    if (s.kw1 < 0.5) continue;
-    if (kept.some((k) => k.layers < s.layers && Math.abs(k.kw1 - s.kw1) < 1e-6 && Math.abs(k.thd - s.thd) < 1e-6)) continue;
+  for (const s of out.sort((a, b) => a.layers - b.layers || b.kw1 - a.kw1)) {
+    const firstOfCount = !kept.some((k) => k.layers === s.layers);
+    if (s.kw1 < 0.5 && !(firstOfCount && s.layers >= 3)) continue;
+    const twin = kept.find((k) => k.layers < s.layers && Math.abs(k.kw1 - s.kw1) < 1e-6 && Math.abs(k.thd - s.thd) < 1e-6);
+    if (twin) {
+      if (!firstOfCount) continue;
+      s.tags.push(`same harmonics as ${twin.layers === 1 ? 'single' : twin.layers === 2 ? 'double' : `${twin.layers}-layer`} winding`);
+    }
     kept.push(s);
   }
   out.length = 0;

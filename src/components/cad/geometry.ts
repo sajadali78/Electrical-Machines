@@ -4,7 +4,7 @@
  */
 import { ipmMagnetRects } from '../../core/sizing/rotor/pm';
 import type { DesignResult, SlotResult } from '../../core/sizing/result';
-import { shapeOf, splitEqualArea, centroid, bounds, type Pt } from '../../core/slots';
+import { shapeOf, splitByWeights, centroid, bounds, type Pt } from '../../core/slots';
 import type { LayerArrangement, WindingMatrix } from '../../core/types';
 
 export type XY = [number, number];
@@ -81,8 +81,9 @@ export interface ConductorCell {
 export function windingCells(slot: SlotResult, R: number, Q: number, side: 'stator' | 'rotor', matrix: WindingMatrix, arrangement: LayerArrangement, offset = 0): ConductorCell[] {
   const shape = shapeOf(slot.shape);
   const region = shape.conductors(slot.params)[0];
-  const L = matrix.length;
-  const layers = splitEqualArea(region, L, arrangement); // layer 0 nearest the air gap
+  // layer areas follow the layer turns; layer 0 nearest the air gap
+  const weights = matrix.map((row) => row.find((c) => c.sign !== 0)?.w ?? 1);
+  const layers = splitByWeights(region, weights, arrangement);
   const out: ConductorCell[] = [];
   for (let k = 0; k < Q; k++) {
     const th = slotTheta(k, Q, offset);

@@ -93,9 +93,10 @@ describe('multi-layer windings (layer stacks)', () => {
     expect(ml.harmonics[0].mmfRel).toBeLessThan(0.3 * dl.harmonics[0].mmfRel);
   });
 
-  it('default stacks: even counts equal the shifted double layers, odd counts end with a go layer', () => {
+  it('default stacks: even counts are shifted double layers, odd counts end with a shared double-turn layer', () => {
     expect(defaultLayerDefs(4, 1, 12, 10)).toEqual(stack([0, 1], [1, -1], [5, 1], [6, -1]));
-    expect(defaultLayerDefs(3, 8, 36, 4)).toEqual(stack([0, 1], [8, -1], [1, 1]));
+    expect(defaultLayerDefs(3, 8, 36, 4)).toEqual([{ shift: 0, sign: 1 }, { shift: 8, sign: -1, turns: 2 }, { shift: 16, sign: 1 }]);
+    expect(defaultLayerDefs(5, 1, 12, 10)).toEqual([...stack([0, 1], [1, -1]), { shift: 5, sign: 1 }, { shift: 6, sign: -1, turns: 2 }, { shift: 7, sign: 1 }]);
   });
 
   it('3-layer 12/10 winding [0+, 1−, 2+] is balanced and closable', () => {
@@ -116,14 +117,34 @@ describe('multi-layer windings (layer stacks)', () => {
     expect(hasDuplicateLayers(bs, stack([0, 1], [1, -1], [2, 1]))).toBe(false);
   });
 
-  it('odd layer counts are flagged when the base layer itself is not polarity-balanced (9/8)', () => {
-    const l = generateLayout(spec(9, 8, 3, 1));
+  it('equal-turn odd stacks that cannot close are flagged (9/8)', () => {
+    const l = generateLayout(spec(9, 8, 3, 1, { layerDefs: stack([0, 1], [1, -1], [2, 1]) }));
     expect(l.notes.join(' ')).toMatch(/unequal/);
   });
 
+  it('default 3-layer stack (shared double-turn middle layer) closes for 9/8 with k_w1 = k_w,base·k_p²', () => {
+    const s = spec(9, 8, 3, 1);
+    const l = generateLayout(s);
+    expect(l.notes).toEqual([]);
+    expect(l.units).toBe(4);
+    expect(polarityBalance(l.matrix, 3)).toBe(true);
+    const a = analyzeWinding(l.matrix, 8, 3, l.coils, {});
+    expect(a.balanced).toBe(true);
+    const kp = Math.sin((80 * Math.PI) / 180); // |1 − e^{−j160°}| / 2
+    expect(a.kw1).toBeCloseTo((0.9452 / kp) * kp * kp, 3);
+    expect(l.coils.length).toBe(2 * 9);
+  });
+
+  it('a 3-layer winding is suggested for every feasible slot/pole combination', () => {
+    for (const [Q, P] of [[9, 8], [9, 6], [12, 10], [15, 4], [18, 16], [24, 4], [27, 6], [36, 4], [48, 8]] as const) {
+      const r = suggestWindings(Q, P, 3, 3);
+      expect(r.suggestions.some((x) => x.layers === 3), `${Q}/${P}`).toBe(true);
+    }
+  });
+
   it('stack optimiser: candidates sorted by score and consistent with the full analysis', () => {
-    for (const L of [3, 4]) {
-      const c = optimizeLayerStack(12, 10, 3, L, 1, 'subharmonics', 0.85);
+    for (const [L, minKw] of [[3, 0.85], [4, 0.5]] as const) {
+      const c = optimizeLayerStack(12, 10, 3, L, 1, 'subharmonics', minKw);
       expect(c.length).toBeGreaterThan(0);
       for (let i = 1; i < c.length; i++) expect(c[i].score).toBeGreaterThanOrEqual(c[i - 1].score);
       const best = c[0];

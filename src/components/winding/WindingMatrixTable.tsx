@@ -23,6 +23,7 @@ export function WindingMatrixTable({ matrix, onCell, label = 'Layer' }: { matrix
             <tr key={l}>
               <th scope="row" style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>
                 {label} {l + 1}
+                {(row.find((c) => c.sign !== 0)?.w ?? 1) > 1 ? ` (×${row.find((c) => c.sign !== 0)?.w})` : ''}
               </th>
               {row.map((c, k) => (
                 <td
